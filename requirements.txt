@@ -3,3 +3,5 @@ scikit-learn
 numpy
 rank_bm25
 gensim
+datasets
+huggingface_hub

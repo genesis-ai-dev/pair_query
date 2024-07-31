@@ -2,6 +2,9 @@ import json
 from typing import List, Dict
 from pair import PairedData
 from queries import Query
+from datasets import Dataset
+from huggingface_hub import HfApi
+
 
 class GPT4oMiniAdapter:
     def __init__(self, paired_data: PairedData):
@@ -36,3 +39,44 @@ class GPT4oMiniAdapter:
                 json.dump(item, f, ensure_ascii=False)
                 f.write('\n')
 
+class UnslothAdapter:
+    def __init__(self, paired_data: PairedData):
+        self.paired_data = paired_data
+
+    def generate_training_data(self, num_examples: int, include_examples: bool = False) -> Dataset:
+        instructions = []
+        inputs = []
+        outputs = []
+
+        for i in range(num_examples):
+            example = self.paired_data.get_training_example(i)
+            
+            instruction = "Translate the following text accurately."
+            
+            if include_examples:
+                input_content = "Here are some example translations:\n"
+                for idx, (source, target) in enumerate(example['results'][:3], 1):
+                    input_content += f"-- {source} -> {target}\n"
+                input_content += f"\nUse the above examples to translate this:\n{example['query']}"
+            else:
+                input_content = example['query']
+            
+            instructions.append(instruction)
+            inputs.append(input_content)
+            outputs.append(example['target'])
+
+        dataset_dict = {
+            "instruction": instructions,
+            "input": inputs,
+            "output": outputs
+        }
+
+        return Dataset.from_dict(dataset_dict)
+
+    def save_training_data(self, dataset: Dataset, filename: str):
+        dataset.save_to_disk(filename)
+
+    def upload_to_huggingface(self, dataset: Dataset, repo_name: str, token: str):
+        api = HfApi()
+        api.create_repo(repo_name, private=True, token=token)
+        dataset.push_to_hub(repo_name, token=token)
