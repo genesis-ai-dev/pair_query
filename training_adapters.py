@@ -10,10 +10,11 @@ class GPT4oMiniAdapter:
     def __init__(self, paired_data: PairedData):
         self.paired_data = paired_data
 
-    def generate_training_data(self, num_examples: int, include_examples: bool = False) -> List[Dict]:
+    def generate_training_data(self, num_examples: int, include_examples: bool = False, k=10, start=0) -> List[Dict]:
         training_data = []
         for i in range(num_examples):
-            example = self.paired_data.get_training_example(i)
+            i = i + start
+            example = self.paired_data.get_training_example(i, k=k)
             messages = [
                 {"role": "system", "content": "You are a translation assistant. Translate the given text accurately."}
             ]
