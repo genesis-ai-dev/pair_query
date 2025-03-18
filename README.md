@@ -1,97 +1,59 @@
-# Language Translation Training Data Generator
+# PairQuery: Translation Benchmark 
 
-This module provides tools for generating training data for language translation models, particularly focused on fine-tuning large language models like GPT-4. It consists of several components that work together to create high-quality, context-aware translation examples.
+This module provides tools for two main purposes:
+1. **Benchmarking Translation Performance**: Compare zero-shot vs. few-shot performance of language models on translation tasks
+2. **Generating Training Data**: Create high-quality, context-aware examples for fine-tuning translation models
 
 ## Components
 
-### 1. PairedData (pair.py)
+### 1. Translation Benchmarking (translator.py)
 
-The `PairedData` class is responsible for handling paired language data. It reads source and target language files, preprocesses the text, and provides methods for searching and retrieving training examples.
-
-Key features:
-- Reads and preprocesses source and target language files
-- Supports custom preprocessing functions
-- Implements a search functionality to find similar translations
-- Provides a method to get training examples
-
-### 2. Query Classes (queries.py)
-
-This file contains various query classes that implement different search algorithms for finding similar translations. These include:
-
-- TFiDF: Uses Term Frequency-Inverse Document Frequency for similarity matching
-- MostOverlappingWords: Finds translations with the most overlapping words
-- BM25Search: Implements the BM25 ranking function for information retrieval
-- FuzzySearch: Uses fuzzy string matching for finding similar translations
-- WordEmbeddingSearch: Utilizes word embeddings for semantic similarity search
-
-### 3. Preprocessing Functions (pre.py)
-
-The `pre.py` file provides utility functions for text preprocessing, including:
-
-- Removing punctuation
-- Removing extra whitespace
-- Removing numbers
-- Composing multiple preprocessing functions
-
-### 4. Training Adapters (training_adapters.py)
-
-This file contains classes for generating training data for different model architectures:
-
-#### GPT4oMiniAdapter
-
-Designed to generate training data specifically for fine-tuning GPT-4 or similar language models. It creates training examples in the format of conversation-like interactions, optionally including example translations for context.
+The benchmarking system allows you to compare LLM translation performance with and without examples:
 
 Key features:
-- Generates training data with system, user, and assistant messages
-- Supports including example translations in the prompt
-- Provides a method to save the generated training data to a file
+- Compare zero-shot vs. few-shot translation performance
+- Test with different numbers of examples (e.g., 0, 5, 10)
+- Generate comprehensive visualizations including:
+  - Progressive performance charts showing how scores evolve as more samples are tested
+  - Comparative bar charts showing performance across different example counts
+  - Line charts displaying the effect of example count on translation quality
+  - Smoothed trend lines for better visualization
+- Calculate similarity using multiple metrics (sequence similarity, word overlap, word order)
+- Save detailed results in JSON format for further analysis
 
-#### UnslothAdapter
+### 2. Parallel Corpus Handler (extract.py)
 
-Generates training data in a format suitable for the Unsloth library, which is designed for efficient fine-tuning of language models.
+The `PairCorpus` class manages parallel text in two languages:
 
 Key features:
-- Creates a dataset with instructions, inputs, and outputs
-- Supports including example translations in the input
-- Provides methods to save the dataset locally or upload it to Hugging Face
+- Reads and manages source and target language files
+- Provides similarity search to find related translations
+- Formats prompts for translation with or without examples
+- Supports benchmarking by generating test cases
 
-## Usage
+### 3. Training Data Generation
 
-To use this module:
+For fine-tuning translation models, the system can generate training data:
 
-1. Prepare your source and target language files.
-2. Choose or create appropriate preprocessing functions.
-3. Initialize a `PairedData` object with your files and chosen query class.
-4. Create a `GPT4oMiniAdapter` or `UnslothAdapter` with the `PairedData` object.
-5. Generate training data using the adapter's `generate_training_data` method.
-6. Save the generated data using the appropriate save method.
+## Usage Examples
 
-## Example
+### Running a Translation Benchmark
+
+To compare zero-shot and few-shot translation performance:
+
 ```python
+from pair_query.translator import run_benchmark
 
-# Define preprocessing function
-preprocess = compose_functions(remove_punctuation, remove_extra_whitespace)
-
-# Initialize PairedData with source and target files
-paired_data = PairedData(
-    source_file="pair_query/tiny_corpus/source.txt",
-    target_file="pair_query/tiny_corpus/target.txt",
-    pre_process=preprocess,
-    query_class=BM25Search
+results = run_benchmark(
+    corpus_path_source="ebible/corpus/eng-engULB.txt", 
+    corpus_path_target="ebible/corpus/kos-kos.txt", 
+    num_examples=[0, 5, 10],  # Compare zero-shot (0) with 5 and 10 examples
+    num_tests=20,  # Number of test samples
+    language="Kosraean"  # Target language name
 )
 
-# Create GPT4oMiniAdapter
-adapter = GPT4oMiniAdapter(paired_data)
-
-# Generate training data
-num_examples = 5
-include_examples = True
-training_data = adapter.generate_training_data(num_examples, include_examples)
-
-# Save training data to a file
-adapter.save_training_data("gpt4omini_training_data.jsonl", training_data)
-
-print(f"Generated {num_examples} training examples and saved to gpt4omini_training_data.jsonl")
+# The results contain detailed information about performance
+print(f"Zero-shot avg. similarity: {results[0]['avg_similarity']:.4f}")
+print(f"5-shot avg. similarity: {results[5]['avg_similarity']:.4f}")
+print(f"10-shot avg. similarity: {results[10]['avg_similarity']:.4f}")
 ```
-
-NOTE: You can also use the Unsloth adapter to generate a Hugginface instruction dataset for Llama 3.1 finetuning.
