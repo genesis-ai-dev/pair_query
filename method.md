@@ -11,5 +11,7 @@ Even though the two matricies are different, we can see that they have a high co
 
 This is a good sign that the translation is good!
 
+Here is a visual aid:
 
 
+![Translation Correlation Diagram](translation-correlation-diagram.svg)

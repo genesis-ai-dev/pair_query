@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 400">
+  <!-- Main Nodes -->
+  <rect x="80" y="180" width="160" height="40" rx="10" fill="#3498db" />
+  <text x="160" y="205" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="white">A sentence...</text>
+  
+  <rect x="460" y="180" width="160" height="40" rx="10" fill="#e74c3c" />
+  <text x="540" y="205" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="white">Ein Satz...</text>
+  
+  <!-- Example Nodes English Side -->
+  <circle cx="60" cy="80" r="40" fill="#a9cce3" stroke="#3498db" stroke-width="2" />
+  <text x="60" y="85" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Book...</text>
+  
+  <circle cx="160" cy="60" r="40" fill="#a9cce3" stroke="#3498db" stroke-width="2" />
+  <text x="160" y="65" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Car...</text>
+  
+  <circle cx="260" cy="80" r="40" fill="#a9cce3" stroke="#3498db" stroke-width="2" />
+  <text x="260" y="85" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">House...</text>
+  
+  <!-- Example Nodes German Side -->
+  <circle cx="440" cy="80" r="40" fill="#f5b7b1" stroke="#e74c3c" stroke-width="2" />
+  <text x="440" y="85" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Buch...</text>
+  
+  <circle cx="540" cy="60" r="40" fill="#f5b7b1" stroke="#e74c3c" stroke-width="2" />
+  <text x="540" y="65" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Auto...</text>
+  
+  <circle cx="640" cy="80" r="40" fill="#f5b7b1" stroke="#e74c3c" stroke-width="2" />
+  <text x="640" y="85" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Haus...</text>
+  
+  <!-- Connection Lines English Side with Scores -->
+  <line x1="100" y1="180" x2="60" y2="120" stroke="#3498db" stroke-width="2.5" />
+  <rect x="60" y="140" width="30" height="22" rx="5" fill="white" stroke="#3498db" />
+  <text x="75" y="156" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#3498db">0.3</text>
+  
+  <line x1="160" y1="180" x2="160" y2="100" stroke="#3498db" stroke-width="2.5" />
+  <rect x="135" y="130" width="30" height="22" rx="5" fill="white" stroke="#3498db" />
+  <text x="150" y="146" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#3498db">0.1</text>
+  
+  <line x1="220" y1="180" x2="260" y2="120" stroke="#3498db" stroke-width="2.5" />
+  <rect x="250" y="140" width="30" height="22" rx="5" fill="white" stroke="#3498db" />
+  <text x="265" y="156" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#3498db">0.2</text>
+  
+  <!-- Connection Lines German Side with Scores -->
+  <line x1="480" y1="180" x2="440" y2="120" stroke="#e74c3c" stroke-width="2.5" />
+  <rect x="450" y="140" width="30" height="22" rx="5" fill="white" stroke="#e74c3c" />
+  <text x="465" y="156" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#e74c3c">0.4</text>
+  
+  <line x1="540" y1="180" x2="540" y2="100" stroke="#e74c3c" stroke-width="2.5" />
+  <rect x="525" y="130" width="30" height="22" rx="5" fill="white" stroke="#e74c3c" />
+  <text x="540" y="146" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#e74c3c">0.2</text>
+  
+  <line x1="600" y1="180" x2="640" y2="120" stroke="#e74c3c" stroke-width="2.5" />
+  <rect x="620" y="140" width="30" height="22" rx="5" fill="white" stroke="#e74c3c" />
+  <text x="635" y="156" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#e74c3c">0.3</text>
+  
+  <!-- Correlation Explanation -->
+  <rect x="230" y="280" width="240" height="90" rx="10" fill="#2ecc71" stroke="#218c59" stroke-width="3" />
+  <text x="350" y="315" font-family="Arial" font-size="18" font-weight="bold" text-anchor="middle" fill="white">Correlation = 0.97</text>
+  <text x="350" y="345" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="white">High quality translation!</text>
+  
+  <!-- Connecting Arrows -->
+  <line x1="160" y1="220" x2="250" y2="280" stroke="#333" stroke-width="3" stroke-dasharray="5,5" />
+  <polygon points="250,280 240,270 235,282" fill="#333"/>
+  
+  <line x1="540" y1="220" x2="450" y2="280" stroke="#333" stroke-width="3" stroke-dasharray="5,5" />
+  <polygon points="450,280 460,270 465,282" fill="#333"/>
+  
+  <!-- Similarity Matrices -->
+  <rect x="80" y="240" width="160" height="25" rx="5" fill="#eef7fc" stroke="#3498db" />
+  <text x="160" y="257" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">[0.3, 0.1, 0.2]</text>
+  
+  <rect x="460" y="240" width="160" height="25" rx="5" fill="#fceeee" stroke="#e74c3c" />
+  <text x="540" y="257" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">[0.4, 0.2, 0.3]</text>
+</svg>
