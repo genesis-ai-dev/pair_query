@@ -5,13 +5,23 @@ This script tests error counts from 1 to 5 for each error type and creates a sim
 """
 
 import os
+import sys
 import logging
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-from error_sensitivity import analyze_multiple_error_sensitivity
-from extract import PairCorpus, QualityEstimator
-from similarity_measures import (
+import multiprocessing
+from typing import List
+
+# Add the parent directory to the Python path to find modules
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Get the parent directory path
+PARENT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+from error_sensitivity import analyze_multiple_error_sensitivity, ErrorType
+from pq.main import PairCorpus, QualityEstimator
+from pq.similarity_measures import (
     NGramSimilarity,
     WordOverlapSimilarity,
     TfidfCosineSimilarity
@@ -22,13 +32,18 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Default configuration values
-SOURCE_PATH = "corpus/eng-engULB.txt"
-TARGET_PATH = "corpus/kos-kos.txt"
+SOURCE_PATH = os.path.join(PARENT_DIR, "files/corpus/eng-engULB.txt")
+TARGET_PATH = os.path.join(PARENT_DIR, "files/corpus/kos-kos.txt")
 ERROR_LEVEL = "character"  # Options: "word" or "character"
 NUM_SAMPLES = 30      # Number of samples to test
 MAX_ERRORS = 5        # Maximum number of errors to introduce
 EXAMPLE_SIZE = 20     # Number of examples for quality estimation
-OUTPUT_FILE = "results/error_sensitivity_results.png"  # Output file for visualization
+# Automatically determine the number of CPUs for parallelization
+NUM_WORKERS = max(1, multiprocessing.cpu_count() - 1)  # Leave one CPU free
+OUTPUT_FILE = os.path.join(PARENT_DIR, "results/error_sensitivity_results.png")  # Output file for visualization
+
+# Validate error level is one of the accepted literals
+assert ERROR_LEVEL in ["word", "character"], f"ERROR_LEVEL must be 'word' or 'character', got {ERROR_LEVEL}"
 
 def create_summary_visualization(results, error_level):
     """Create a clear, informative visualization of the error sensitivity results."""
@@ -132,6 +147,12 @@ if __name__ == "__main__":
         logger.error(f"Corpus files not found. Please make sure {SOURCE_PATH} and {TARGET_PATH} exist.")
         exit(1)
     
+    # Create results directory if it doesn't exist
+    results_dir = os.path.dirname(OUTPUT_FILE)
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+        logger.info(f"Created results directory: {results_dir}")
+    
     # Initialize corpus
     corpus = PairCorpus(source_path=SOURCE_PATH, target_path=TARGET_PATH)
     logger.info(f"Loaded corpus with {len(corpus.source_lines)} lines")
@@ -139,23 +160,25 @@ if __name__ == "__main__":
     # Create a quality estimator with multiple similarity measures
     estimator = QualityEstimator(
         similarity_measures=[
-            NGramSimilarity(max_n=3),
-            WordOverlapSimilarity(), 
-            TfidfCosineSimilarity(min_n=1, max_n=3)
+            TfidfCosineSimilarity(min_n=1, max_n=20)
         ],
         combination_mode="multiply"  # 'multiply' or 'average'
     )
     
+    # List of error types (with proper typing)
+    error_types: List[ErrorType] = ["replace", "insert", "delete", "swap"]  # type: ignore
+    
     # Run sensitivity analysis
-    logger.info(f"Running {ERROR_LEVEL}-level error sensitivity analysis for 1-{MAX_ERRORS} errors...")
+    logger.info(f"Running {ERROR_LEVEL}-level error sensitivity analysis for 1-{MAX_ERRORS} errors with {NUM_WORKERS} worker processes...")
     results = analyze_multiple_error_sensitivity(
         corpus=corpus,
         num_samples=NUM_SAMPLES,
-        error_level=ERROR_LEVEL,
-        error_types=["replace", "insert", "delete", "swap"],
+        error_level=ERROR_LEVEL,  # type: ignore
+        error_types=error_types,
         max_errors=MAX_ERRORS,
         estimator=estimator,
-        example_size=EXAMPLE_SIZE
+        example_size=EXAMPLE_SIZE,
+        num_workers=NUM_WORKERS
     )
     
     # Print summary statistics
@@ -167,7 +190,7 @@ if __name__ == "__main__":
               f"average drop {ec_stats['average_quality_drop']:.4f}")
     
     print("\nBy Error Type:")
-    for error_type in ["replace", "insert", "delete", "swap"]:
+    for error_type in error_types:
         print(f"  {error_type.capitalize()}")
         for i, error_count in enumerate(range(1, MAX_ERRORS + 1)):
             et_stats = results["by_error_count"][error_count]["by_error_type"][error_type]

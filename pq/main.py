@@ -11,7 +11,7 @@ from tqdm.auto import tqdm  # type: ignore
 import logging
 
 # Import similarity measures from the new module
-from similarity_measures import (
+from pq.similarity_measures import (
     SimilarityMeasure, 
     NGramSimilarity, 
     WordOverlapSimilarity,
@@ -439,7 +439,7 @@ class Benchmarker:
 
 
 if __name__ == "__main__":
-    corpus = PairCorpus(source_path="corpus/eng-engULB.txt", target_path="corpus/kos-kos.txt")
+    corpus = PairCorpus(source_path="../files/corpus/eng-engULB.txt", target_path="../files/corpus/kos-kos.txt")
     
     # Create individual estimators for comparison
     word_overlap_estimator = QualityEstimator(

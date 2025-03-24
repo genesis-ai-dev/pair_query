@@ -13,7 +13,7 @@ from matplotlib.figure import Figure
 from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 from sklearn.metrics.pairwise import cosine_similarity  # type: ignore
 
-import extract
+import pq.main as main
 
 class Translator:
     """Handles translation using OpenAI API"""
@@ -365,7 +365,7 @@ def run_benchmark(
     
     try:
         # Load corpus
-        corpus = extract.PairCorpus(corpus_path_source, corpus_path_target)
+        corpus = main.PairCorpus(corpus_path_source, corpus_path_target)
         translator = Translator()
         
         # Select test indices if not provided
