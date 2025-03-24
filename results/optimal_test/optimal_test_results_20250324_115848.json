@@ -1,0 +1,122 @@
+{
+  "config": {
+    "tfidf_min_n": 1,
+    "tfidf_max_n": 20,
+    "sample_size": 100,
+    "quality_threshold": 0.95,
+    "num_tests": 40,
+    "max_errors": 5,
+    "error_types": [
+      "replace",
+      "insert",
+      "delete",
+      "swap"
+    ]
+  },
+  "timestamp": "2025-03-24T11:55:53.879325",
+  "error_counts": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "by_error_count": {
+    "1": {
+      "downgrade_percent": 92.5,
+      "average_quality_drop": 0.025625269540704237,
+      "total_tests": 40,
+      "downgrade_count": 37
+    },
+    "2": {
+      "downgrade_percent": 100.0,
+      "average_quality_drop": 0.04045122803612512,
+      "total_tests": 40,
+      "downgrade_count": 40
+    },
+    "3": {
+      "downgrade_percent": 95.0,
+      "average_quality_drop": 0.08321411615921703,
+      "total_tests": 40,
+      "downgrade_count": 38
+    },
+    "4": {
+      "downgrade_percent": 100.0,
+      "average_quality_drop": 0.10604225463807877,
+      "total_tests": 40,
+      "downgrade_count": 40
+    },
+    "5": {
+      "downgrade_percent": 100.0,
+      "average_quality_drop": 0.13651180199129712,
+      "total_tests": 40,
+      "downgrade_count": 40
+    }
+  },
+  "by_error_type": {
+    "replace": {
+      "downgrade_percent": [
+        80.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0
+      ],
+      "avg_quality_drop": [
+        0.006671421460618709,
+        0.03220273324662627,
+        0.09005649901512192,
+        0.14311367639916941,
+        0.13794946462146
+      ]
+    },
+    "insert": {
+      "downgrade_percent": [
+        100.0,
+        100.0,
+        80.0,
+        100.0,
+        100.0
+      ],
+      "avg_quality_drop": [
+        0.02791127354288605,
+        0.03461377972987717,
+        0.10213042348379686,
+        0.13981434786011687,
+        0.11295318364742649
+      ]
+    },
+    "delete": {
+      "downgrade_percent": [
+        90.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0
+      ],
+      "avg_quality_drop": [
+        0.013587713953383674,
+        0.04842762575672489,
+        0.07161871076806378,
+        0.051128166269093514,
+        0.11944757396616415
+      ]
+    },
+    "swap": {
+      "downgrade_percent": [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0
+      ],
+      "avg_quality_drop": [
+        0.054330669205928515,
+        0.04656077341127215,
+        0.06905083136988559,
+        0.09011282802393528,
+        0.17569698573013776
+      ]
+    }
+  }
+}

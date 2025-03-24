@@ -39,9 +39,4 @@ coverage.xml
 *.swo
 .DS_Store
 
-# Project specific
-benchmark_results/
-results/
-*.log
-*.png
-*.svg
+research_paper.md
