@@ -1,0 +1,117 @@
+{
+  "experiment_name": "tfidf_param_test_tfidf_min3_max5",
+  "experiment_description": "TF-IDF Parameter Effect Analysis (TF-IDF: min_n=3, max_n=5)",
+  "error_level": "character",
+  "max_errors": 5,
+  "tfidf_parameters": {
+    "min_n": 3,
+    "max_n": 5
+  },
+  "num_samples": 30,
+  "timestamp": "2025-03-24T11:18:01.751773",
+  "error_counts": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "by_error_count": {
+    "1": {
+      "downgrade_percent": 70.83333333333334,
+      "average_quality_drop": 0.03760052862074877,
+      "total_tests": 120,
+      "downgrade_count": 85
+    },
+    "2": {
+      "downgrade_percent": 75.0,
+      "average_quality_drop": 0.04770608646921568,
+      "total_tests": 120,
+      "downgrade_count": 90
+    },
+    "3": {
+      "downgrade_percent": 80.83333333333333,
+      "average_quality_drop": 0.04919397652310467,
+      "total_tests": 120,
+      "downgrade_count": 97
+    },
+    "4": {
+      "downgrade_percent": 77.5,
+      "average_quality_drop": 0.06527104909387667,
+      "total_tests": 120,
+      "downgrade_count": 93
+    },
+    "5": {
+      "downgrade_percent": 80.83333333333333,
+      "average_quality_drop": 0.059377875842410034,
+      "total_tests": 120,
+      "downgrade_count": 97
+    }
+  },
+  "by_error_type": {
+    "replace": {
+      "downgrade_percent": [
+        73.33333333333333,
+        73.33333333333333,
+        80.0,
+        83.33333333333334,
+        83.33333333333334
+      ],
+      "avg_quality_drop": [
+        0.04782365947207034,
+        0.04931643353302533,
+        0.05112153672810569,
+        0.05626961409885371,
+        0.05226937058721837
+      ]
+    },
+    "insert": {
+      "downgrade_percent": [
+        76.66666666666667,
+        66.66666666666666,
+        90.0,
+        73.33333333333333,
+        76.66666666666667
+      ],
+      "avg_quality_drop": [
+        0.04687079294578217,
+        0.05096398228970669,
+        0.04487027366859677,
+        0.09631925909232862,
+        0.0649305595118483
+      ]
+    },
+    "delete": {
+      "downgrade_percent": [
+        73.33333333333333,
+        80.0,
+        73.33333333333333,
+        70.0,
+        80.0
+      ],
+      "avg_quality_drop": [
+        0.0019619414295499434,
+        0.04456733188115917,
+        0.05388423001441257,
+        0.05854358577053222,
+        0.06400103409695276
+      ]
+    },
+    "swap": {
+      "downgrade_percent": [
+        60.0,
+        80.0,
+        80.0,
+        83.33333333333334,
+        83.33333333333334
+      ],
+      "avg_quality_drop": [
+        0.056818526398611596,
+        0.04665377639837088,
+        0.04783118299572626,
+        0.05260112848187127,
+        0.0569396801973576
+      ]
+    }
+  }
+}
