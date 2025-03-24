@@ -59,3 +59,36 @@ For fine-tuning translation models, the system can generate training data.
 ### Running a Translation Benchmark
 
 To compare zero-shot and few-shot translation performance:
+
+### Translation Quality Estimation
+
+To evaluate the quality of a translation without reference translations:
+
+```python
+from pq.main import PairCorpus, QualityEstimator
+from pq.similarity_measures import TfidfCosineSimilarity
+
+# Load a parallel corpus
+corpus = PairCorpus(
+    source_path="files/corpus/eng-engULB.txt",
+    target_path="files/corpus/kos-kos.txt",
+)
+
+# Create a quality estimator with TF-IDF cosine similarity
+estimator = QualityEstimator(
+    similarity_measures=[TfidfCosineSimilarity()],
+    combination_mode="multiply",
+)
+
+# Get a sample translation pair
+pair_index = 100
+random_pair = corpus.get_pairs(pair_index)
+
+# Display the source text, translation, and estimated quality
+print("Source: ", random_pair[0])
+print("Target: ", random_pair[1])
+print("Quality: ", estimator.evaluate_translation(random_pair[0], random_pair[1], corpus, sample_size=25))
+```
+
+This example demonstrates how PairQuery evaluates translation quality by measuring correlation patterns between source and target languages, without requiring reference translations.
+
