@@ -2,6 +2,7 @@
 """
 Script to analyze how the Quality Estimator responds to multiple errors.
 This script tests error counts from 1 to 5 for each error type and creates a simple visualization.
+It can also compare different example selection methods (random vs search-based vs random-then-sort).
 """
 
 import os
@@ -11,6 +12,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import multiprocessing
+import argparse
 from typing import List
 
 # Add the parent directory to the Python path to find modules
@@ -19,7 +21,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 # Get the parent directory path
 PARENT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-from error_sensitivity import analyze_multiple_error_sensitivity, ErrorType
+from error_sensitivity import analyze_multiple_error_sensitivity, ErrorType, visualize_multiple_error_results
 from pq.main import PairCorpus, QualityEstimator
 from pq.similarity_measures import (
     NGramSimilarity,
@@ -40,121 +42,49 @@ MAX_ERRORS = 5        # Maximum number of errors to introduce
 EXAMPLE_SIZE = 20     # Number of examples for quality estimation
 # Automatically determine the number of CPUs for parallelization
 NUM_WORKERS = max(1, multiprocessing.cpu_count() - 1)  # Leave one CPU free
-OUTPUT_FILE = os.path.join(PARENT_DIR, "results/error_sensitivity_results.png")  # Output file for visualization
-
-# Validate error level is one of the accepted literals
-assert ERROR_LEVEL in ["word", "character"], f"ERROR_LEVEL must be 'word' or 'character', got {ERROR_LEVEL}"
+RESULTS_DIR = os.path.join(PARENT_DIR, "results")
+OUTPUT_FILE = os.path.join(RESULTS_DIR, "error_sensitivity_results.png")  # Output file for visualization
+COMPARE_SELECTION = False  # Whether to compare random vs search-based selection
+RANDOM_POOL_SIZE = 1000    # Default size of random pool for 'random_then_sort' method
 
 def create_summary_visualization(results, error_level):
     """Create a clear, informative visualization of the error sensitivity results."""
-    # Set up the style
-    sns.set_style("whitegrid")
-    plt.figure(figsize=(14, 10))
-    
-    # Create a plot with two subplots - top for percentage, bottom for quality drop
-    gs = plt.GridSpec(2, 1, height_ratios=[1, 1], hspace=0.3)
-    
-    # Extract common data
-    error_counts = results["error_counts"]
-    error_types = list(results["by_error_type"].keys())
-    colors = sns.color_palette("husl", len(error_types))
-    
-    # Top subplot: Downgrade percentage by error count
-    ax1 = plt.subplot(gs[0])
-    
-    # Plot lines for each error type with custom colors
-    for i, error_type in enumerate(error_types):
-        downgrade_percents = results["by_error_type"][error_type]["downgrade_percent"]
-        ax1.plot(error_counts, downgrade_percents, 'o-', 
-                linewidth=2.5, markersize=10, 
-                color=colors[i], label=f"{error_type.capitalize()}")
-    
-    # Calculate and plot overall average with black
-    overall_percents = [results["by_error_count"][ec]["downgrade_percent"] for ec in error_counts]
-    ax1.plot(error_counts, overall_percents, 'ko-', 
-            linewidth=3, markersize=12, label="Overall Average")
-    
-    # Add value labels above the points
-    for i, percent in enumerate(overall_percents):
-        ax1.annotate(f"{percent:.1f}%", 
-                   xy=(error_counts[i], percent + 2),
-                   ha='center', va='bottom',
-                   fontsize=12, fontweight='bold')
-    
-    # Set limits, labels and legend
-    ax1.set_ylim(0, 105)
-    ax1.set_xlabel(f'Number of {error_level.capitalize()}-Level Errors', fontsize=13)
-    ax1.set_ylabel('Quality Downgrade Percentage (%)', fontsize=13)
-    ax1.set_title(f'Percentage of Translations with Quality Downgrade\nby Number of {error_level.capitalize()}-Level Errors', 
-                fontsize=16, fontweight='bold')
-    ax1.set_xticks(error_counts)
-    ax1.grid(True, linestyle='--', alpha=0.7)
-    ax1.legend(loc='lower right', fontsize=12, framealpha=0.9)
-    
-    # Bottom subplot: Average quality drop by error count
-    ax2 = plt.subplot(gs[1])
-    
-    # Extract quality drops for each error type with the same colors as above
-    for i, error_type in enumerate(error_types):
-        quality_drops = results["by_error_type"][error_type]["avg_quality_drop"]
-        ax2.plot(error_counts, quality_drops, 'o-',
-                linewidth=2.5, markersize=10,
-                color=colors[i], label=f"{error_type.capitalize()}")
-    
-    # Calculate and plot overall average with black
-    overall_drops = [results["by_error_count"][ec]["average_quality_drop"] for ec in error_counts]
-    ax2.plot(error_counts, overall_drops, 'ko-', 
-            linewidth=3, markersize=12, label="Overall Average")
-    
-    # Add value labels above the points
-    for i, drop in enumerate(overall_drops):
-        ax2.annotate(f"{drop:.4f}", 
-                   xy=(error_counts[i], drop + max(overall_drops) * 0.05),
-                   ha='center', va='bottom',
-                   fontsize=12, fontweight='bold')
-    
-    # Set labels and legend
-    ax2.set_xlabel(f'Number of {error_level.capitalize()}-Level Errors', fontsize=13)
-    ax2.set_ylabel('Average Quality Drop', fontsize=13)
-    ax2.set_title(f'Average Quality Score Drop\nby Number of {error_level.capitalize()}-Level Errors', 
-                fontsize=16, fontweight='bold')
-    ax2.set_xticks(error_counts)
-    ax2.grid(True, linestyle='--', alpha=0.7)
-    ax2.legend(loc='upper left', fontsize=12, framealpha=0.9)
-    
-    # Add a summary text box
-    summary_text = (
-        f"{error_level.capitalize()}-Level Error Analysis Summary:\n"
-        f"• Samples tested: {len(results['samples'])}\n"
-        f"• Single error detection rate: {overall_percents[0]:.1f}%\n"
-        f"• Average quality drop (5 errors): {overall_drops[-1]:.4f}\n"
-        f"• Most sensitive to: {error_types[np.argmax([results['by_error_type'][et]['avg_quality_drop'][-1] for et in error_types])].capitalize()} errors"
-    )
-    
-    plt.figtext(0.5, 0.01, summary_text, ha="center", fontsize=13, 
-               bbox={"facecolor":"lightyellow", "alpha":0.9, "pad":10, "edgecolor":"orange"})
-    
-    # Add overall title and adjust layout
-    plt.suptitle(f"Quality Estimation Sensitivity to {error_level.capitalize()}-Level Errors", 
-                fontsize=18, fontweight='bold', y=0.98)
-    plt.tight_layout(rect=[0, 0.05, 1, 0.95])
-    
-    return plt.gcf()
+    # This function is now replaced by the visualize_multiple_error_results function
+    # from error_sensitivity module, which handles both single results and comparisons
+    return visualize_multiple_error_results(results, error_level)
 
 if __name__ == "__main__":
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description='Run error sensitivity analysis')
+    parser.add_argument('--source', default=SOURCE_PATH, help='Path to source corpus file')
+    parser.add_argument('--target', default=TARGET_PATH, help='Path to target corpus file')
+    parser.add_argument('--level', default=ERROR_LEVEL, choices=['word', 'character'], 
+                        help='Level at which to introduce errors')
+    parser.add_argument('--samples', type=int, default=NUM_SAMPLES, help='Number of samples to test')
+    parser.add_argument('--max-errors', type=int, default=MAX_ERRORS, help='Maximum number of errors to introduce')
+    parser.add_argument('--example-size', type=int, default=EXAMPLE_SIZE, 
+                        help='Number of examples for quality estimation')
+    parser.add_argument('--workers', type=int, default=NUM_WORKERS, help='Number of worker processes')
+    parser.add_argument('--output-dir', default=RESULTS_DIR, help='Directory to save results')
+    parser.add_argument('--compare', action='store_true', default=COMPARE_SELECTION,
+                       help='Compare different example selection methods')
+    parser.add_argument('--pool-size', type=int, default=RANDOM_POOL_SIZE,
+                       help='Size of random pool for random_then_sort selection method')
+    
+    args = parser.parse_args()
+    
     # Check if corpus files exist
-    if not os.path.exists(SOURCE_PATH) or not os.path.exists(TARGET_PATH):
-        logger.error(f"Corpus files not found. Please make sure {SOURCE_PATH} and {TARGET_PATH} exist.")
+    if not os.path.exists(args.source) or not os.path.exists(args.target):
+        logger.error(f"Corpus files not found. Please make sure {args.source} and {args.target} exist.")
         exit(1)
     
     # Create results directory if it doesn't exist
-    results_dir = os.path.dirname(OUTPUT_FILE)
-    if not os.path.exists(results_dir):
-        os.makedirs(results_dir)
-        logger.info(f"Created results directory: {results_dir}")
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+        logger.info(f"Created results directory: {args.output_dir}")
     
     # Initialize corpus
-    corpus = PairCorpus(source_path=SOURCE_PATH, target_path=TARGET_PATH)
+    corpus = PairCorpus(source_path=args.source, target_path=args.target)
     logger.info(f"Loaded corpus with {len(corpus.source_lines)} lines")
     
     # Create a quality estimator with multiple similarity measures
@@ -169,45 +99,118 @@ if __name__ == "__main__":
     error_types: List[ErrorType] = ["replace", "insert", "delete", "swap"]  # type: ignore
     
     # Run sensitivity analysis
-    logger.info(f"Running {ERROR_LEVEL}-level error sensitivity analysis for 1-{MAX_ERRORS} errors with {NUM_WORKERS} worker processes...")
+    if args.compare:
+        logger.info(f"Running {args.level}-level error sensitivity analysis comparing example selection methods...")
+        logger.info(f"Using random pool size of {args.pool_size} for random_then_sort method")
+    else:
+        logger.info(f"Running {args.level}-level error sensitivity analysis for 1-{args.max_errors} errors...")
+        
     results = analyze_multiple_error_sensitivity(
         corpus=corpus,
-        num_samples=NUM_SAMPLES,
-        error_level=ERROR_LEVEL,  # type: ignore
+        num_samples=args.samples,
+        error_level=args.level,  # type: ignore
         error_types=error_types,
-        max_errors=MAX_ERRORS,
+        max_errors=args.max_errors,
         estimator=estimator,
-        example_size=EXAMPLE_SIZE,
-        num_workers=NUM_WORKERS
+        example_size=args.example_size,
+        num_workers=args.workers,
+        compare_selection_methods=args.compare,
+        random_pool_size=args.pool_size
     )
     
     # Print summary statistics
-    print(f"\n{ERROR_LEVEL.capitalize()}-Level Error Analysis Results:")
-    print("\nDowngrade Percentage by Error Count:")
-    for error_count in range(1, MAX_ERRORS + 1):
-        ec_stats = results["by_error_count"][error_count]
-        print(f"  {error_count} error{'s' if error_count > 1 else ''}: {ec_stats['downgrade_percent']:.1f}% downgrade, "
-              f"average drop {ec_stats['average_quality_drop']:.4f}")
+    if args.compare:
+        # Print comparison results
+        print(f"\n{args.level.capitalize()}-Level Error Analysis Results (Comparing Selection Methods):")
+        
+        search_results = results["search"]
+        random_results = results["random"]
+        random_then_sort_results = results["random_then_sort"]
+        
+        print("\nSearch-based Selection Method:")
+        for error_count in range(1, args.max_errors + 1):
+            ec_stats = search_results["by_error_count"][error_count]
+            print(f"  {error_count} error{'s' if error_count > 1 else ''}: {ec_stats['downgrade_percent']:.1f}% downgrade, "
+                  f"average drop {ec_stats['average_quality_drop']:.4f}")
+        
+        print("\nRandom Selection Method:")
+        for error_count in range(1, args.max_errors + 1):
+            ec_stats = random_results["by_error_count"][error_count]
+            print(f"  {error_count} error{'s' if error_count > 1 else ''}: {ec_stats['downgrade_percent']:.1f}% downgrade, "
+                  f"average drop {ec_stats['average_quality_drop']:.4f}")
+        
+        print(f"\nRandom-then-Sort Selection Method (pool size: {args.pool_size}):")
+        for error_count in range(1, args.max_errors + 1):
+            ec_stats = random_then_sort_results["by_error_count"][error_count]
+            print(f"  {error_count} error{'s' if error_count > 1 else ''}: {ec_stats['downgrade_percent']:.1f}% downgrade, "
+                  f"average drop {ec_stats['average_quality_drop']:.4f}")
+        
+        # Calculate improvements
+        search_single = search_results["by_error_count"][1]["downgrade_percent"]
+        random_single = random_results["by_error_count"][1]["downgrade_percent"]
+        random_then_sort_single = random_then_sort_results["by_error_count"][1]["downgrade_percent"]
+        
+        search_max = search_results["by_error_count"][args.max_errors]["downgrade_percent"]
+        random_max = random_results["by_error_count"][args.max_errors]["downgrade_percent"]
+        random_then_sort_max = random_then_sort_results["by_error_count"][args.max_errors]["downgrade_percent"]
+        
+        # Improvement of search vs random
+        search_vs_random_single = ((search_single - random_single) / random_single) * 100 if random_single > 0 else 0
+        search_vs_random_max = ((search_max - random_max) / random_max) * 100 if random_max > 0 else 0
+        
+        # Improvement of random_then_sort vs random
+        random_then_sort_vs_random_single = ((random_then_sort_single - random_single) / random_single) * 100 if random_single > 0 else 0
+        random_then_sort_vs_random_max = ((random_then_sort_max - random_max) / random_max) * 100 if random_max > 0 else 0
+        
+        print(f"\nImprovement Summary:")
+        print(f"  Single error detection:")
+        print(f"    - Search improves over Random by {search_vs_random_single:.1f}%")
+        print(f"    - Random-then-Sort improves over Random by {random_then_sort_vs_random_single:.1f}%")
+        print(f"  Multiple error detection ({args.max_errors} errors):")
+        print(f"    - Search improves over Random by {search_vs_random_max:.1f}%")
+        print(f"    - Random-then-Sort improves over Random by {random_then_sort_vs_random_max:.1f}%")
+        
+    else:
+        # Print standard results
+        print(f"\n{args.level.capitalize()}-Level Error Analysis Results:")
+        print("\nDowngrade Percentage by Error Count:")
+        for error_count in range(1, args.max_errors + 1):
+            ec_stats = results["by_error_count"][error_count]
+            print(f"  {error_count} error{'s' if error_count > 1 else ''}: {ec_stats['downgrade_percent']:.1f}% downgrade, "
+                  f"average drop {ec_stats['average_quality_drop']:.4f}")
+        
+        print("\nBy Error Type:")
+        for error_type in error_types:
+            print(f"  {error_type.capitalize()}")
+            for i, error_count in enumerate(range(1, args.max_errors + 1)):
+                et_stats = results["by_error_count"][error_count]["by_error_type"][error_type]
+                if et_stats["count"] > 0:
+                    downgrade_percent = (et_stats["downgrade_count"] / et_stats["count"]) * 100
+                    avg_drop = 0.0
+                    if et_stats["downgrade_count"] > 0:
+                        avg_drop = et_stats["quality_drop"] / et_stats["downgrade_count"]
+                    print(f"    {error_count} error{'s' if error_count > 1 else ''}: {downgrade_percent:.1f}% downgrade, "
+                          f"average drop {avg_drop:.4f}")
     
-    print("\nBy Error Type:")
-    for error_type in error_types:
-        print(f"  {error_type.capitalize()}")
-        for i, error_count in enumerate(range(1, MAX_ERRORS + 1)):
-            et_stats = results["by_error_count"][error_count]["by_error_type"][error_type]
-            if et_stats["count"] > 0:
-                downgrade_percent = (et_stats["downgrade_count"] / et_stats["count"]) * 100
-                avg_drop = 0.0
-                if et_stats["downgrade_count"] > 0:
-                    avg_drop = et_stats["quality_drop"] / et_stats["downgrade_count"]
-                print(f"    {error_count} error{'s' if error_count > 1 else ''}: {downgrade_percent:.1f}% downgrade, "
-                      f"average drop {avg_drop:.4f}")
+    # Create and save visualizations
+    logger.info("Creating visualizations...")
+    figures = create_summary_visualization(results, args.level)
     
-    # Create and save visualization
-    logger.info("Creating visualization...")
-    fig = create_summary_visualization(results, ERROR_LEVEL)
+    # Save each figure
+    for i, fig in enumerate(figures):
+        if args.compare:
+            if i == 0:
+                # First figure is the comparison visualization
+                output_file = os.path.join(args.output_dir, f"error_sensitivity_comparison.png")
+            else:
+                # Method-specific visualizations
+                method = ["search", "random", "random_then_sort"][i-1]
+                output_file = os.path.join(args.output_dir, f"error_sensitivity_{method}.png")
+        else:
+            # Standard visualization
+            output_file = os.path.join(args.output_dir, f"error_sensitivity_results.png")
+        
+        fig.savefig(output_file, dpi=300, bbox_inches='tight')
+        logger.info(f"Saved visualization to {output_file}")
     
-    # Save the figure
-    fig.savefig(OUTPUT_FILE, dpi=300, bbox_inches='tight')
-    logger.info(f"Saved visualization to {OUTPUT_FILE}")
-    
-    logger.info(f"{ERROR_LEVEL.capitalize()}-level error analysis complete!") 
+    logger.info(f"{args.level.capitalize()}-level error analysis complete!") 

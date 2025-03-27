@@ -46,9 +46,6 @@ class PairCorpus:
             self.target_lines = f.readlines()
             
         self._vectorizer = TfidfVectorizer(lowercase=True, token_pattern=r"(?u)\b\w+\b")
-        
-        if len(self.source_lines) != len(self.target_lines):
-            logger.warning(f"Source and target line counts differ: {len(self.source_lines)} vs {len(self.target_lines)}")
 
     def get_pairs(self, line_number: int) -> Tuple[str, str]:
         """Get a source-target pair by line number."""
@@ -64,13 +61,11 @@ class PairCorpus:
         """
         search_term = search_term or self.source_lines[index_line].strip()
             
-        if not search_term.strip():
-            return []
-            
         search_range = range(0, index_line) if previous_only else range(len(self.source_lines))
-        
+
+        # Handle the case where search_range is empty (when previous_only=True and index_line=0)
         if not search_range:
-            return []
+            raise ValueError("Cannot search previous lines when index_line is 0 and previous_only=True")
             
         lines_to_search = [self.source_lines[i].strip() for i in search_range]
         
@@ -208,11 +203,11 @@ class QualityEstimator:
         """
         # Handle single measure or default
         if similarity_measures is None:
-            self.similarity_measures = [NGramSimilarity()]
+            self.similarity_measures = [NGramSimilarity()]  # type: List[SimilarityMeasure]
         elif isinstance(similarity_measures, SimilarityMeasure):
-            self.similarity_measures = [similarity_measures]
+            self.similarity_measures = [similarity_measures]  # type: List[SimilarityMeasure]
         else:
-            self.similarity_measures = similarity_measures
+            self.similarity_measures = similarity_measures  # type: List[SimilarityMeasure]
             
         # Validate combination mode
         if combination_mode not in ["multiply", "average"]:
@@ -236,7 +231,10 @@ class QualityEstimator:
                            source: str, 
                            translation: str, 
                            corpus: PairCorpus,
-                           sample_size: int = 10) -> float:
+                           sample_size: int = 10,
+                           example_selection: str = "search",
+                           previous_only: bool = False,
+                           source_index: int = 0) -> float:
         """
         Evaluate translation quality using reference corpus.
         
@@ -244,11 +242,54 @@ class QualityEstimator:
         1. Calculate correlation between source and target similarities
         2. Combine correlations using the specified combination mode
         
+        Args:
+            source: Source text
+            translation: Translation to evaluate
+            corpus: Reference corpus
+            sample_size: Number of examples to use
+            example_selection: Method to select examples ('search', 'random', or 'random_then_sort')
+            previous_only: Whether to only use previous examples
+            source_index: Index of the source text in the corpus (if known)
+        
         Returns a score between 0 and 1.
         """
-        # Get reference examples
-        examples = corpus.search(0, search_term=source, top_n=sample_size)
-        
+        # Get reference examples based on selection method
+        if example_selection == "random":
+            # Select random examples from corpus
+            valid_indices = [i for i in range(len(corpus.source_lines)) 
+                           if len(corpus.source_lines[i].strip()) > 0 
+                           and len(corpus.target_lines[i].strip()) > 0]
+            
+            if len(valid_indices) < sample_size:
+                sample_size = len(valid_indices)
+                
+            if sample_size < 2:
+                return 0.0
+                
+            sample_indices = random.sample(valid_indices, sample_size)
+            
+            # Create SearchResult objects to match the interface expected below
+            examples = [
+                SearchResult(
+                    line_idx=idx,
+                    similarity=0.0,  # Not used for random selection
+                    source_line=corpus.source_lines[idx],
+                    target_line=corpus.target_lines[idx]
+                )
+                for idx in sample_indices
+            ]
+        else:
+            # Use similarity search (default behavior)
+            # If source_index was not provided, try to find it in the corpus
+            if source_index == 0:
+                for i, line in enumerate(corpus.source_lines):
+                    if line.strip() == source.strip():
+                        source_index = i
+                        break
+            
+            # Perform the search with the identified index
+            examples = corpus.search(source_index, search_term=source, previous_only=previous_only, top_n=sample_size)
+            
         if len(examples) < 2:
             return 0.0
             
@@ -317,7 +358,8 @@ class Benchmarker:
                           degradation_levels: int = 5,
                           mode: str = "random",
                           example_size: int = 10,
-                          quality_estimator: Optional[QualityEstimator] = None) -> Dict:
+                          quality_estimator: Optional[QualityEstimator] = None,
+                          example_selection: str = "random") -> Dict:
         """Test quality estimation by comparing with degraded translations.
         
         Args:
@@ -349,7 +391,7 @@ class Benchmarker:
             
             # Evaluate original quality
             baseline = estimator.evaluate_translation(
-                source, reference, corpus, sample_size=example_size
+                source, reference, corpus, sample_size=example_size, example_selection="random"
             )
             
             level_scores = []
@@ -470,7 +512,7 @@ if __name__ == "__main__":
     print("Testing with combined similarity measures...")
     random_result = Benchmarker.test_quality_metric(
         corpus=corpus,
-        num_tests=5, 
+        num_tests=5,
         degradation_levels=5,
         mode="transition",
         example_size=25,
